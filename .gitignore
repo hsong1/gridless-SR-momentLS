@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# R
+.Rhistory
+.Ruserdata
+.Rproj.user
+*.Rproj
+
+# temporary/editor files
+*.swp
+*~
+
+
+
