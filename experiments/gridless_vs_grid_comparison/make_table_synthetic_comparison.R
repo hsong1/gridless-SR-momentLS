@@ -4,7 +4,8 @@ library(knitr)
 library(kableExtra)
 
 filenames<- list.files(path="experiments/gridless_vs_grid_comparison/results/",pattern="obj_comparison_setting")
-for(i in 1:length(filenames)){
+filenames = filenames[c(1,6,7,8)]
+for(i in 1:4){
   load(paste0("experiments/gridless_vs_grid_comparison/results/",filenames[i]))
 }
 
@@ -23,9 +24,13 @@ df = results_all %>% filter(setting_id <=4) %>%
     # Calculate Stats
     T_Mean = mean(time),
     T_SE   = sd(time) / sqrt(n()),
-    E_Mean = mean(val_diff),
-    E_SE   = sd(val_diff) / sqrt(n()),
-    P_positive = mean(val_diff > -1e-10),
+    E_Mean = mean(equi_diff),
+    E_SE   = sd(equi_diff) / sqrt(n()),
+    dh_Mean = mean(dh_diff),
+    dh_SE = sd(dh_diff)/sqrt(n()),
+    R_Mean = mean(rel_diff),
+    R_SE = sd(rel_diff)/sqrt(n()),
+    P_positive = mean(equi_diff > -1e-10),
     .groups = "drop"
   ) %>%
   mutate(Method = ifelse(is.na(grid), "Gridless", paste0("Grid ($s=", grid, "$)")),
@@ -37,16 +42,18 @@ latex_df = df %>%
     Setting = setting_id,
     `Time (s)` = sprintf("%.4f (%.4f)", T_Mean, T_SE),
     `Excess L2 Error` = ifelse(Method == "Gridless","0 (Baseline)",
-                               paste0("\\num{", sprintf("%.2e", E_Mean), "} (\\num{", sprintf("%.2e", E_SE), "})")
-    )
-  ) %>%
-  select(Setting, Method, `Time (s)`, `Excess L2 Error`)
+                               paste0("\\num{", sprintf("%.2e", E_Mean), "} (\\num{", sprintf("%.2e", E_SE), "})")),
+    `Relative L2 Error` = ifelse(Method == "Gridless","0 (Baseline)",
+                               paste0("\\num{", sprintf("%.2e", R_Mean), "} (\\num{", sprintf("%.2e", R_SE), "})")),
+    `Suboptimality Bound` = paste0("\\num{", sprintf("%.2e", dh_Mean), "} (\\num{", sprintf("%.2e", dh_SE), "})")
+    )%>%
+  select(Setting, Method, `Time (s)`, `Excess L2 Error`, `Relative L2 Error`, `Suboptimality Bound`)
 
 kbl(latex_df, 
     format = "latex", 
     booktabs = TRUE,     
     escape = FALSE, 
-    align = c("c", "l", "c", "c"), 
+    align = c("c", "l", "c", "c", "c", "c"), 
     linesep = "") %>%   
   kable_styling(latex_options = "hold_position") %>%
   collapse_rows(columns = 1, latex_hline = "major", valign = "middle")
