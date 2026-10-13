@@ -33,7 +33,7 @@ function estimate_ldp(i,cff,ldp_tol, last_interval)
 	# right endpoint 
 	a0 = !last_interval ? (1- 2.0^-abs(i)) : 1.0
 	# interval length
-	Ui_len = !last_interval ? (1-a0) : (2.0^-abs(i))
+	Ui_len = !last_interval ? (1-a0) : (2.0^(-abs(i)+1))
 	
   # initialization for coefficient vector
 	b = zeros(up+1)
@@ -94,13 +94,13 @@ end
 # The transformation uses dyadic intervals based on powers of 2.
 function transform(x,i,last_interval)
   a0 = !last_interval ? (1- 2.0^-abs(i)) : 1
-  Ui_len = !last_interval ? (1-a0) : (2.0^-abs(i))
+  Ui_len = !last_interval ? (1-a0) : (2.0^(-abs(i)+1))
   return(sign(i)*(a0 - x*Ui_len))
 end
 
 function get_transform_params(ind_val, last_interval)
   a0 = !last_interval ? (1- 2.0^-abs(ind_val)) : 1.0
-  Ui_len = !last_interval ? (1.0-a0) : (2.0^-abs(ind_val))
+  Ui_len = !last_interval ? (1.0-a0) : (2.0^(-abs(ind_val)+1))
   # coefficients for tx(x) = c0 + c1*x
   c0 = sign(ind_val) * a0
   c1 = -sign(ind_val) * Ui_len
@@ -232,7 +232,7 @@ function dd_poly_exact_original(theta, cff, weight_option, V, supp, weight)
       dd_exact = -2.0*(term1 -term2)
       # if weighted, multiply dd_exact with (1-|tx|)
       if weight_option != "unweighted"
-        dd_exact = (ind_val > 0 ? (1 - tx) : (1 + tx)) * dd_exact
+        dd_exact *= 1-abs(tx)
       end
       results[idx] = dd_exact
     end
@@ -396,7 +396,7 @@ function dd_optimize(p_dict, weight_option,V, supp, weight, delta, opt_type = "r
 
 		# the search domain S
 		if abs(ind_val) == J0 # end intervals
-		  ll= !last_interval ? (2.0^(abs(J0)) * delta - 1.0) : (2.0^abs(J0)*delta)
+		  ll= !last_interval ? (2.0^(abs(J0)) * delta - 1.0) : (2.0^(abs(J0)-1)*delta)
 		  ul = 1.0
 		else
 			ll = 0.0
@@ -486,14 +486,14 @@ end
 # Parameters:
 #   - r: input sequence to match
 #   - delta: precision parameter for interval bounds
-#   - weight_option: "unweighted" or weighted mode
+#   - weight_option: "unweighted" or "weighted" (h(theta)=1-|theta|)
 #   - V: "Z" for [-1,1] support, otherwise [0,1]
-#   - method: "exact" for using full input sequence based polynomial, otherwise uses polynomial approximations
 #   - maxit: maximum number of iterations
 #   - init_supp: initial support points
 #   - init_weight: initial weights
 #   - tol: convergence tolerance
-#   - graph: if true, plots convergence progress
+#   - opt_type: "root" for root-finding algorithm; otherwises it uses SOS optimization.
+#   - verbose: print iteration details
 # Returns: (final support points, final weights)
 function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, tol, opt_type = "root", verbose = false)
 	

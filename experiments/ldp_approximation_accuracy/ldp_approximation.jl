@@ -50,7 +50,10 @@ function ldp_test(cf, tol, verbose = true)
       diff = v0 .- v1
       max_abs_diff = maximum(abs, diff)
       imax = argmax(abs.(diff))
-      if verbose println("id: $i (endpoint = $(ldp_dict[i][2])), max |p0 - p1| = $max_abs_diff at x = $(xs[imax])") end
+      if verbose
+        startpoint, endpoint = extrema(tx)
+        println("id: $i (start = $startpoint, endpoint = $endpoint), max |p0 - p1| = $max_abs_diff at x = $(xs[imax])")
+      end
       
       # output
       diff_vec[j] = max_abs_diff
