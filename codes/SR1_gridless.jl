@@ -519,7 +519,6 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
   
     if(ceil(-log2(delta)) > J)
 	    J0 = J+1
-	    # throw(NotImplementedException("cannot handle 1-delta >= 1- 2^{-J} yet"))
     else
   	  # 1-2^{-J0+1} <= 1-delta < 1 - 2^{-J0}
   	  # <-> log2(1/delta) < J0 <= 1+log2(1/delta) <-> J0 = ceil(log2(1/delta))
@@ -537,7 +536,7 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
     ldp_dict = Dict(id_int .=> [estimate_ldp(i,cff,ldp_tol,abs(i)==(J+1)) for i in id_int])
     
     if verbose
-        println("$length(id_int) intervals with endpoints: ", [ldp_dict[i][2] for i in id_int])      
+        println("$(length(id_int)) intervals with endpoints: ", [ldp_dict[i][2] for i in id_int])      
     end
     
     # initialization
@@ -614,3 +613,68 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
 end
 
 
+
+
+
+function delta_h(r, delta, weight_option, V, supp, weight, tol, opt_type = "root", verbose = false)
+  	
+  	### low degree approximation over sub-intervals ###
+  	# polynomial to be approximated: p(theta) = sum_{j=0}^n cff[j+1]*theta^j
+  	if(V == "Z")
+  	    cff = copy(r)
+  	    cff[2:end] *= 2
+    else
+        cff = copy(r)
+    end
+    cff_1 = sum(abs.(cff)) # l1 norm of p(theta) ||cff||_1
+    ldp_tol = tol / (6*cff_1)
+    n = length(cff)-1 # highest degree in p(theta)
+  	
+  	# number of sub-intervals in [0,1]
+  	J = Int(ceil(log2(n)))
+  
+    if(ceil(-log2(delta)) > J)
+	    J0 = J+1
+    else
+  	  # 1-2^{-J0+1} <= 1-delta < 1 - 2^{-J0}
+  	  # <-> log2(1/delta) < J0 <= 1+log2(1/delta) <-> J0 = ceil(log2(1/delta))
+  	  J0 = Int(ceil(-log2(delta)))
+    end
+  	
+  	
+  	# create sub-intervals
+    # obtain low-degree polynomial approximations
+    if(V == "Z")
+        id_int = append!([1:1:J0;], [-J0:1:-1;])
+    else
+        id_int = [1:1:J0;]
+    end
+    ldp_dict = Dict(id_int .=> [estimate_ldp(i,cff,ldp_tol,abs(i)==(J+1)) for i in id_int])
+    
+    if verbose
+        println("$(length(id_int)) intervals with endpoints: ", [ldp_dict[i][2] for i in id_int])      
+    end
+    
+    # initialization
+    #exponents = [0:1:n-1;]
+    supp = supp isa AbstractVector ? supp : Float64[supp]
+    weight = weight isa AbstractVector ? weight : Float64[weight]
+    res = dd_optimize(ldp_dict, weight_option,V, supp, weight, delta, opt_type)
+
+    min_grad_approx, index = findmin(res.gradients)
+    best_support_candidate = res.supports[index]
+
+    # compute the exact directional derivative at best_support_candidate
+    best_ind_val = id_int[index]
+    x_m = res.local_xs[index]
+    last_interval = (ldp_dict[best_ind_val][2] == 1)
+    min_grad_exact = only(dd_poly_exact(x_m,best_ind_val,last_interval,cff,weight_option,V,supp,weight))
+
+  	return (
+      delta_h = -min_grad_exact,
+      delta_h_ldp = -min_grad_approx,
+      theta = best_support_candidate,
+      ldp_tol = ldp_tol,
+      tol = tol
+    )
+end
