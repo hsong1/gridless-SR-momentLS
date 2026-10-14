@@ -495,8 +495,9 @@ end
 #   - tol: convergence tolerance
 #   - opt_type: "root" for root-finding algorithm; otherwises it uses SOS optimization.
 #   - verbose: print iteration details
+#   - save_trajectory: save (supp,weight) for each iteration
 # Returns: (final support points, final weights)
-function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, tol, h_power = 1, opt_type = "root", verbose = false)
+function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, tol, h_power = 1, opt_type = "root", verbose = false, save_trajectory = false)
 	
 	 
   	# if(weight_option == "unweighted" && delta < 10e-12)
@@ -551,7 +552,7 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
     
     if verbose println("Starting SR1 Gridless: tol = $tol, maxit = $maxit") end
     
-  
+    trajectory = []
     while(iter < maxit && !conv)
         SRstep = SR(V, supp, weight,r) 
         supp = SRstep[1]
@@ -564,6 +565,14 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
             println("Current Weights: ", weight)
         end
         
+        if save_trajectory
+            push!(trajectory, Dict(
+                "iteration" => iter + 1,
+                "support" => copy(supp),
+                "weights" => copy(weight)
+            ))
+        end
+
         res = dd_optimize(ldp_dict, weight_option,V, supp, weight, delta, opt_type, h_power)
         
         # println("end of finding new support!!!")
@@ -599,9 +608,11 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
         println("failed to converge")
     end
   	
-  	#pop!(supp)
-  	#pop!(weight)
-  	
+    if !conv && iter == maxit && iter >0
+  	  pop!(supp)
+  	  pop!(weight)
+  	end
+
   	return (
     	  support = supp, 
         weights = weight, 
@@ -609,7 +620,8 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
         min_grad = min_grad_exact,
         ldp_tol = ldp_tol,
         tol = tol,
-        converged = conv
+        converged = conv,
+        trajectory = trajectory
       )
 end
 

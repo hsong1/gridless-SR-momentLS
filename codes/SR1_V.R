@@ -156,14 +156,14 @@ SR1_gridless_R<-function(y,
                        tol = 1e-10,
                        h_power = 1L,
                        opt_type="root",
-                       verbose=F){
+                       verbose=FALSE,
+                       save_trajectory = FALSE){
   
   weight_option = match.arg(weight_option, c("unweighted","weighted"))
   V = match.arg(V,c("Z","N"))
   opt_type = match.arg(opt_type,c("root","SOS") )
   h_power = as.integer(h_power)
-  # (r, delta, weight_option, V,  maxit, init_supp, init_weight, tol, opt_type="root", verbose=false)
-  out = julia_call("SR1_gridless",y, delta, weight_option, V,maxit,init_supp,init_weight,tol,h_power,opt_type,verbose)
+  out = julia_call("SR1_gridless",y, delta, weight_option, V,maxit,init_supp,init_weight,tol,h_power,opt_type,verbose,save_trajectory)
   return(out)
 }
 
