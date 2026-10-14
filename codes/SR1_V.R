@@ -165,3 +165,32 @@ SR1_gridless_R<-function(y,
   return(out)
 }
 
+
+# computable bound for psi(mu=(supp,weight)) - psi(mu_hat)
+subopt_bound <- function(y,
+  delta, 
+  weight_option, 
+  V,
+  supp, 
+  weight, 
+  ldp_tol, 
+  opt_type = "root", 
+  verbose = F
+){
+  weight_option = match.arg(weight_option, c("unweighted","weighted"))
+  V = match.arg(V,c("Z","N"))
+  opt_type = match.arg(opt_type,c("root","SOS") )
+  
+  # compute delta_h upper bound
+  delta_h_val = julia_call("delta_h",y, delta, weight_option, V,supp,weight, ldp_tol, opt_type,verbose)
+
+  # norms over V
+  if(V=="N"){
+    norm1_y = sum(abs(y)); norm2_y = sqrt(sum(y^2))
+  }else if(V=="Z"){
+    norm1_y = abs(y[1]) + 2*sum(abs(y[-1]))
+    norm2_y = sqrt(y[1]^2 + 2*sum(y[-1]^2))
+  }
+
+  return(ifelse(weight_option=="weighted", delta_h_val$delta_h_upper*4*norm1_y, delta_h_val$delta_h_upper*norm2_y))
+}

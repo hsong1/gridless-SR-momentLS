@@ -616,7 +616,7 @@ end
 
 
 
-function delta_h(r, delta, weight_option, V, supp, weight, tol, opt_type = "root", verbose = false)
+function delta_h(r, delta, weight_option, V, supp, weight, ldp_tol, opt_type = "root", verbose = false)
   	
   	### low degree approximation over sub-intervals ###
   	# polynomial to be approximated: p(theta) = sum_{j=0}^n cff[j+1]*theta^j
@@ -627,7 +627,6 @@ function delta_h(r, delta, weight_option, V, supp, weight, tol, opt_type = "root
         cff = copy(r)
     end
     cff_1 = sum(abs.(cff)) # l1 norm of p(theta) ||cff||_1
-    ldp_tol = tol / (6*cff_1)
     n = length(cff)-1 # highest degree in p(theta)
   	
   	# number of sub-intervals in [0,1]
@@ -670,11 +669,26 @@ function delta_h(r, delta, weight_option, V, supp, weight, tol, opt_type = "root
     last_interval = (ldp_dict[best_ind_val][2] == 1)
     min_grad_exact = only(dd_poly_exact(x_m,best_ind_val,last_interval,cff,weight_option,V,supp,weight))
 
+    epsilon_0 = 2*ldp_tol*cff_1
+    
+    # delta_h(mu) = max_theta -D_theta^h(mu) = -D_(theta*)^h(mu) 
+    
+    # output:
+    # delta_h_candidate = -D_(theta_tilde)^h(mu)
+    # delta_h_ldp = max_theta -D_theta^h(mu;ldp_tol) = -D_(theta_tilde)_^h(mu;ldp_tol) 
+    delta_h_candidate = -min_grad_exact
+    delta_h_ldp = -min_grad_approx
+
+    # |D_(theta*)^h(mu) -D_theta*^h(mu;ldp_tol)|<=epsilon_0
+    # -> -epsilon_0 + D_theta*^h(mu;ldp_tol)<=D_(theta*)^h(mu) 
+    # -> -epsilon_0 + D_theta_tilde^h(mu;ldp_tol)<= D_(theta*)^h(mu) 
+    # i.e., delta_h(mu)<= delta_h_ldp + epsilon_0
   	return (
-      delta_h = -min_grad_exact,
-      delta_h_ldp = -min_grad_approx,
-      theta = best_support_candidate,
+      delta_h_candidate = delta_h_candidate,
+      delta_h_ldp = delta_h_ldp,
+      delta_h_upper = delta_h_ldp + epsilon_0,
+      theta_tilde = best_support_candidate,
       ldp_tol = ldp_tol,
-      tol = tol
+      epsilon_0 = epsilon_0
     )
 end
