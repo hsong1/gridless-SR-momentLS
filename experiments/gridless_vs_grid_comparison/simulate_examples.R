@@ -45,9 +45,9 @@ simulate_examples<- function(sim_setting, seed0){
   }
   if(sim_setting >=5){
     # load data
-    load("experiment/BayesLasso/concreteStrength.Rdata")
+    load("experiments/gridless_vs_grid_comparison/BayesLasso/concreteStrength.Rdata")
     # load bayesLasso sampler
-    source("experiment/BayesLasso/bayesLasso.R")
+    source("experiments/gridless_vs_grid_comparison/BayesLasso/bayesLasso.R")
     
     # sample
     warmup = 1000; n = 10000

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Run the shell script from experiments/gridless_vs_grid_comparison
 # Move up to the parent directory
@@ -13,7 +14,8 @@ do
    START_TIME=$SECONDS
    
    # Run the R script
-   Rscript experiments/gridless_vs_grid_comparison/time_and_objvalues.R $s 100
+   Rscript experiments/gridless_vs_grid_comparison/time_and_objvalues.R $s 100 equidist
+   Rscript experiments/gridless_vs_grid_comparison/time_and_objvalues.R $s 100 log
    
    # Calculate elapsed time
    ELAPSED_TIME=$(($SECONDS - $START_TIME))
