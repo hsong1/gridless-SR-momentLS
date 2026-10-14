@@ -99,7 +99,7 @@ SR1_V = function (y, V, delta = NULL, alphaGrid = NULL, init = NULL, tol = 10^-8
     if (any(init$weights < 0)) {
       stop("all weights need to be positive")
     }
-    inds = findIndices(support = init$support, alphaGrid = alphaGrid)
+    inds = momentLS:::findIndices(support = init$support, alphaGrid = alphaGrid)
     beta = init$weights/s_alpha[inds]
   }
   SR_out = supportReduction(XtX = XtX, Xtr = Xty, s_alpha = s_alpha, 
@@ -154,14 +154,16 @@ SR1_gridless_R<-function(y,
                        init_supp=0,
                        init_weight=0,
                        tol = 1e-10,
+                       h_power = 1L,
                        opt_type="root",
                        verbose=F){
   
   weight_option = match.arg(weight_option, c("unweighted","weighted"))
   V = match.arg(V,c("Z","N"))
   opt_type = match.arg(opt_type,c("root","SOS") )
+  h_power = as.integer(h_power)
   # (r, delta, weight_option, V,  maxit, init_supp, init_weight, tol, opt_type="root", verbose=false)
-  out = julia_call("SR1_gridless",y, delta, weight_option, V,maxit,init_supp,init_weight,tol, opt_type,verbose)
+  out = julia_call("SR1_gridless",y, delta, weight_option, V,maxit,init_supp,init_weight,tol,h_power,opt_type,verbose)
   return(out)
 }
 
@@ -174,15 +176,17 @@ subopt_bound <- function(y,
   supp, 
   weight, 
   ldp_tol, 
+  h_power = 1L,
   opt_type = "root", 
   verbose = F
 ){
   weight_option = match.arg(weight_option, c("unweighted","weighted"))
   V = match.arg(V,c("Z","N"))
   opt_type = match.arg(opt_type,c("root","SOS") )
+  h_power = as.integer(h_power)
   
   # compute delta_h upper bound
-  delta_h_val = julia_call("delta_h",y, delta, weight_option, V,supp,weight, ldp_tol, opt_type,verbose)
+  delta_h_val = julia_call("delta_h",y, delta, weight_option, V,supp,weight, ldp_tol, h_power, opt_type,verbose)
 
   # norms over V
   if(V=="N"){

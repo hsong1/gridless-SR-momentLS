@@ -109,7 +109,7 @@ end
 
 
 
-function coeffs_dd_polys(ind_val, last_interval, coeffs_i, weight_option, V, supp, weight)
+function coeffs_dd_polys(ind_val, last_interval, coeffs_i, weight_option, V, supp, weight, h_power)
   # obtain theta(x)
   c0, c1 = get_transform_params(ind_val, last_interval)
   tx = Polynomial([c0,c1]) # theta(x) = c0 + c1*x
@@ -155,12 +155,13 @@ function coeffs_dd_polys(ind_val, last_interval, coeffs_i, weight_option, V, sup
   if weight_option == "unweighted"
       num = -2 * bracket_total
   else
-      # h(theta) = 1 - |theta|
+      # h(theta) = 1 - |theta|^h_power
       if ind_val > 0 # when theta > 0
-          num = -2 * (1 - tx) * bracket_total
+          h_poly = 1 - tx^h_power
       else
-          num = -2 * (1 + tx) * bracket_total
+          h_poly = 1 - (-tx)^h_power
       end
+      num = -2 * h_poly * bracket_total
   end
   
   return (num_coeffs = Polynomials.coeffs(num), den_coeffs= Polynomials.coeffs(den))
@@ -168,7 +169,7 @@ end
 
 # compute exact (weighted) directional derivative at (supp, weight) for comparison
 # x is a vector where we want to evaluate directional derivatives 
-function dd_poly_exact(x, ind_val, last_interval, cff, weight_option, V, supp, weight)
+function dd_poly_exact(x, ind_val, last_interval, cff, weight_option, V, supp, weight, h_power)
     
     # if x is a scalar, convert x to a vector of length 1
     x_vec = (x isa Number) ? [x] : x
@@ -194,9 +195,9 @@ function dd_poly_exact(x, ind_val, last_interval, cff, weight_option, V, supp, w
       end
       
       dd_exact = -2.0*(term1 -term2)
-      # if weighted, multiply dd_exact with (1-|tx|)
+      # if weighted, multiply dd_exact with (1-|tx|^h_power)
       if weight_option != "unweighted"
-        dd_exact = (ind_val > 0 ? (1 - tx) : (1 + tx)) * dd_exact
+        dd_exact *= 1-abs(tx)^h_power
       end
       results[idx] = dd_exact
     end
@@ -205,7 +206,7 @@ function dd_poly_exact(x, ind_val, last_interval, cff, weight_option, V, supp, w
 end
 
 
-function dd_poly_exact_original(theta, cff, weight_option, V, supp, weight)
+function dd_poly_exact_original(theta, cff, weight_option, V, supp, weight, h_power)
     
     # if theta is a scalar, convert theta to a vector of length 1
     theta_vec = (theta isa Number) ? [theta] : theta
@@ -230,9 +231,9 @@ function dd_poly_exact_original(theta, cff, weight_option, V, supp, weight)
       end
       
       dd_exact = -2.0*(term1 -term2)
-      # if weighted, multiply dd_exact with (1-|tx|)
+      # if weighted, multiply dd_exact with (1-|tx|^h_power)
       if weight_option != "unweighted"
-        dd_exact *= 1-abs(tx)
+        dd_exact *= 1-abs(tx)^h_power
       end
       results[idx] = dd_exact
     end
@@ -374,7 +375,7 @@ function minimize_rf_roots(ll, ul, num_coeffs, den_coeffs)
 end
 
 
-function dd_optimize(p_dict, weight_option,V, supp, weight, delta, opt_type = "root")
+function dd_optimize(p_dict, weight_option,V, supp, weight, delta, opt_type = "root", h_power = 1)
   
   J0 = (V == "Z") ? Int(length(p_dict) / 2) : length(p_dict)
   num_entries = (V == "Z") ? 2*J0 : J0
@@ -392,7 +393,7 @@ function dd_optimize(p_dict, weight_option,V, supp, weight, delta, opt_type = "r
     # println(ind_val)
     last_interval = (p_dict[ind_val][2] == 1) # if a0 = 1
     # create numerator and denominator polynomials
-    num_coeffs, den_coeffs = coeffs_dd_polys(ind_val, last_interval, p_dict[ind_val][1], weight_option, V, supp, weight)
+    num_coeffs, den_coeffs = coeffs_dd_polys(ind_val, last_interval, p_dict[ind_val][1], weight_option, V, supp, weight, h_power)
 
 		# the search domain S
 		if abs(ind_val) == J0 # end intervals
@@ -495,7 +496,7 @@ end
 #   - opt_type: "root" for root-finding algorithm; otherwises it uses SOS optimization.
 #   - verbose: print iteration details
 # Returns: (final support points, final weights)
-function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, tol, opt_type = "root", verbose = false)
+function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, tol, h_power = 1, opt_type = "root", verbose = false)
 	
 	 
   	# if(weight_option == "unweighted" && delta < 10e-12)
@@ -563,7 +564,7 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
             println("Current Weights: ", weight)
         end
         
-        res = dd_optimize(ldp_dict, weight_option,V, supp, weight, delta, opt_type)
+        res = dd_optimize(ldp_dict, weight_option,V, supp, weight, delta, opt_type, h_power)
         
         # println("end of finding new support!!!")
         min_grad_approx, index = findmin(res.gradients)
@@ -573,7 +574,7 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
         best_ind_val = id_int[index]
         x_m = res.local_xs[index]
         last_interval = (ldp_dict[best_ind_val][2] == 1)
-        min_grad_exact = only(dd_poly_exact(x_m,best_ind_val,last_interval,cff,weight_option,V,supp,weight))
+        min_grad_exact = only(dd_poly_exact(x_m,best_ind_val,last_interval,cff,weight_option,V,supp,weight,h_power))
         
         if(min_grad_exact > -tol)
             conv = true
@@ -595,7 +596,7 @@ function SR1_gridless(r, delta, weight_option, V, maxit,init_supp, init_weight, 
     end
     # println(iter)
     if(!conv)
-        println("failed to cvg")
+        println("failed to converge")
     end
   	
   	#pop!(supp)
@@ -616,7 +617,7 @@ end
 
 
 
-function delta_h(r, delta, weight_option, V, supp, weight, ldp_tol, opt_type = "root", verbose = false)
+function delta_h(r, delta, weight_option, V, supp, weight, ldp_tol, h_power=1, opt_type = "root", verbose = false)
   	
   	### low degree approximation over sub-intervals ###
   	# polynomial to be approximated: p(theta) = sum_{j=0}^n cff[j+1]*theta^j
@@ -658,7 +659,7 @@ function delta_h(r, delta, weight_option, V, supp, weight, ldp_tol, opt_type = "
     #exponents = [0:1:n-1;]
     supp = supp isa AbstractVector ? supp : Float64[supp]
     weight = weight isa AbstractVector ? weight : Float64[weight]
-    res = dd_optimize(ldp_dict, weight_option,V, supp, weight, delta, opt_type)
+    res = dd_optimize(ldp_dict, weight_option,V, supp, weight, delta, opt_type, h_power)
 
     min_grad_approx, index = findmin(res.gradients)
     best_support_candidate = res.supports[index]
@@ -667,7 +668,7 @@ function delta_h(r, delta, weight_option, V, supp, weight, ldp_tol, opt_type = "
     best_ind_val = id_int[index]
     x_m = res.local_xs[index]
     last_interval = (ldp_dict[best_ind_val][2] == 1)
-    min_grad_exact = only(dd_poly_exact(x_m,best_ind_val,last_interval,cff,weight_option,V,supp,weight))
+    min_grad_exact = only(dd_poly_exact(x_m,best_ind_val,last_interval,cff,weight_option,V,supp,weight,h_power))
 
     epsilon_0 = 2*ldp_tol*cff_1
     
