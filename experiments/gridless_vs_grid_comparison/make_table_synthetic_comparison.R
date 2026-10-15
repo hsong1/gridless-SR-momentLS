@@ -73,5 +73,5 @@ make_comparison_table <- function(results_all, scale_choice) {
 out_equidist <- make_comparison_table(results_all, "equidist")
 out_log <- make_comparison_table(results_all, "log")
 
-out_equidist$summary_df
-out_log$summary_df
+cat(as.character(out_equidist$latex_code))
+cat(as.character(out_log$latex_code))
