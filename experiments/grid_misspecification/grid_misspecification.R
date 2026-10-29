@@ -54,7 +54,7 @@ plot(
   finer_grid, dd_at_theta(finer_grid, m_grid),
   type = "l",
   xlab = expression(theta),
-  ylab = expression(D[theta]*psi(hat(mu)[G]))
+  ylab = expression(D[theta]*psi(hat(mu)[grid]))
 )
 points(grid0, dd_at_theta(grid0, m_grid),pch = 19, col = "blue", cex=1.2)
 abline(h = 0, lty = 2, col = "grey50")

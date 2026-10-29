@@ -48,30 +48,43 @@ make_comparison_table <- function(results_all, scale_choice) {
       Setting = setting_id,
       Method,
       `Time (s)` = sprintf("%.4f (%.4f)", T_Mean, T_SE),
-      `Excess L2 Error` = ifelse(
+      `Excess Objective Value` = ifelse(
         is.na(grid), "0 (Baseline)", scientific_cell(E_Mean, E_SE)
       ),
-      `Relative Excess L2 Error` = ifelse(
+      `Relative Excess Objective Value` = ifelse(
         is.na(grid), "0 (Baseline)", scientific_cell(R_Mean, R_SE)
       ),
       `Suboptimality Bound` = scientific_cell(SubOpt_Mean, SubOpt_SE)
     )
 
-  latex_code <- kbl(
-    latex_df,
-    format = "latex",
-    booktabs = TRUE,
-    escape = FALSE,
-    align = c("c", "l", "c", "c", "c", "c"),
-    linesep = ""
-  ) %>%
-    kable_styling(latex_options = "hold_position") %>%
-    collapse_rows(columns = 1, latex_hline = "major", valign = "middle")
-  return(list(summary_df=summary_df, latex_code = latex_code))
+  render_table <- function(table_df) {
+    kbl(
+      table_df,
+      format = "latex",
+      booktabs = TRUE,
+      escape = FALSE,
+      align = c("c", "l", rep("c", ncol(table_df) - 2)),
+      linesep = ""
+    ) %>%
+      kable_styling(latex_options = "hold_position") %>%
+      collapse_rows(columns = 1, latex_hline = "major", valign = "middle")
+  }
+
+  return(list(
+    summary_df = summary_df,
+    latex_excess_suboptimality = render_table(
+      select(latex_df, -`Relative Excess Objective Value`)
+    ),
+    latex_relative_excess = render_table(
+      select(latex_df, -`Time (s)`, -`Excess Objective Value`, -`Suboptimality Bound`)
+    )
+  ))
 }
 
 out_equidist <- make_comparison_table(results_all, "equidist")
 out_log <- make_comparison_table(results_all, "log")
 
-cat(as.character(out_equidist$latex_code))
-cat(as.character(out_log$latex_code))
+cat(as.character(out_equidist$latex_excess_suboptimality), "\n")
+cat(as.character(out_equidist$latex_relative_excess), "\n")
+cat(as.character(out_log$latex_excess_suboptimality), "\n")
+cat(as.character(out_log$latex_relative_excess), "\n")

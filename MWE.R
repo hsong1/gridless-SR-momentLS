@@ -11,7 +11,8 @@ y = table(factor(x,levels=0:max(x)))/length(x)
 
 # fit SR gridless
 source("codes/SR1_V.R")
-m_gl = SR1_gridless_R(y = y,delta = 0,weight_option = "weighted",V = "N",maxit = 1000,tol = 1e-10)
+m_gl = SR1_gridless_R(y = y,delta = 0,weight_option = "weighted",V = "N",maxit = 1000,tol = 1e-10,save_trajectory = T)
+sapply(m_gl$trajectory, function(x) L2diff_L2Moment_V(y,support=x$support,weights=x$weights,V="N")) # objective values over iterations
 
 # fit SR grid
 m_grid = SR1_V(y = y,V = "N",delta = 1e-6,n_alphas = 1001,tol = 1e-7)
